@@ -113,7 +113,7 @@ class Agent:
                             diffProps[bp] = aRelIndex
                     elif bp == 'angle':
                         angleDiff = int(aPropValue) - int(bPropValue)
-                        diffProps[bp] = angleDiff
+                        diffProps[bp] = abs(angleDiff)
                     else:
                         diffProps[bp] = bPropValue
 
