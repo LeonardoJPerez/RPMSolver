@@ -91,7 +91,7 @@ class Agent:
         aSn = self.GenerateSN(problemSet['A'])
         bSn = self.GenerateSN(problemSet['B'])
 
-        diffProps = []
+        diffProps = OrderedDict()
         for akey, bkey in zip(aSn, bSn):
             aFigure = aSn[akey]
             bFigure = bSn[bkey]
@@ -102,17 +102,20 @@ class Agent:
                     # if prop is a flag one (relative to frame one such as
                     # inside, left of, etc. Locate the index of the relative
                     # value.)
-                    if bp in self.FlaggedProps:
-                        if bp == 'inside':
-                            aRelIndex = list(aSn.keys()).index(aPropValue)
-                            bRelIndex = list(bSn.keys()).index(bPropValue)
 
-                            if aRelIndex == bRelIndex:
-                                continue
-                        elif bp == 'angle':
-                            angleDiff = aPropValue - bPropValue
+                    if bp == 'inside':
+                        aRelIndex = list(aSn.keys()).index(aPropValue)
+                        bRelIndex = list(bSn.keys()).index(bPropValue)
 
-                    diffProps = bp
+                        if aRelIndex == aRelIndex:
+                            continue
+                        else:
+                            diffProps[bp] = aRelIndex
+                    elif bp == 'angle':
+                        angleDiff = int(aPropValue) - int(bPropValue)
+                        diffProps[bp] = angleDiff
+                    else:
+                        diffProps[bp] = bPropValue
 
         # for each node(figure) in aSn, compare its props and links with bSn.
         # If the prop exist in aSn and bSn AND its value in bSn IS NOT the same
@@ -147,8 +150,16 @@ class Agent:
 
                         # and (awp not in self.FlaggedProps):
                         if (cp == awp) and (cPropValue != awPropValue):
-                            noDiffs = False
-                            break
+                            # if inside and relative position 
+                            if cp == 'inside':
+                                cRelIndex = list(cSn.keys()).index(cPropValue)
+                                awRelIndex = list(answer.keys()).index(awPropValue)
+
+                                if cRelIndex == awRelIndex:
+                                    continue
+                            else:
+                                noDiffs = False
+                                break
 
                     if noDiffs:
                         # validAnswers[i] = answer
@@ -161,19 +172,23 @@ class Agent:
 
                         if cp in diffProps and awp in diffProps:
                             if (cp == awp) and (cPropValue != awPropValue):
+                                if awp == 'inside':
+                                    # check to see if position of awp matches stored pos.
+                                    cRelIndex = list(cSn.keys()).index(cPropValue)
+                                    awRelIndex = list(answer.keys()).index(awPropValue)
+                                    
+                                    if awRelIndex == diffProps[awp] :
+                                        pAnswer += 1
 
-                                if bp in self.FlaggedProps:
-                                    if bp == 'inside':
-                                    aRelIndex = list(aSn.keys()).index(aPropValue)
-                                    bRelIndex = list(bSn.keys()).index(bPropValue)
-
-                                    if aRelIndex == bRelIndex:
-                                        continue
-                                elif bp == 'angle':
-                                    angleDiff = aPropValue - bPropValue
-
-                                pAnswer += 1
-                                # validAnswers[i] = answer
+                                elif awp == 'angle':
+                                    # substract stored angle and match result with awp. if they match add to answers.
+                                    angleDiff = int(cPropValue) - int(awPropValue)                                   
+                                      
+                                    if angleDiff == diffProps[awp] :
+                                        pAnswer += 1
+                                else:
+                                    pAnswer += 1
+                                    # validAnswers[i] = answer
 
             if pAnswer == len(answer.items()):
                 validAnswers[i + 1] = answer
