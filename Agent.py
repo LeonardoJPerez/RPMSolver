@@ -26,7 +26,7 @@ class Agent:
     # main().
 
     def __init__(self):
-        self.FlaggedProps = ["inside", "angle"]
+        self.FlaggedProps = ["inside", "angle", "above"]
         self.AlignmentMirrors = {
             "bottom-left": "bottom-right",
             "top-left": "top-right",
@@ -69,8 +69,8 @@ class Agent:
         # Check if problem is 2x2 or 3x3
         if problem.problemType == '2x2':
             potentialAnswers = self.Solve2By2(problemSet, answerSet)
-
-        return next(iter(potentialAnswers or []), None)
+ 
+        return next(iter(potentialAnswers or []), None)[0]
 
     # def IterateProps(self, figure):
     #     for key in figure.objects:
@@ -104,7 +104,12 @@ class Agent:
         for akey, bkey in zip(aSn, bSn):
             aFigure = aSn[akey]
             bFigure = bSn[bkey]
-            for ap, bp in zip(aFigure.props, bFigure.props):
+
+            controlProps = self.cleanProps(aFigure.props, bFigure.props)
+            for ap, bp in controlProps:
+                if not ap or not bp:
+                    continue
+
                 aPropValue = aFigure.props[ap]
                 bPropValue = bFigure.props[bp]
                 if (ap == bp) and (aPropValue != bPropValue):
@@ -112,7 +117,7 @@ class Agent:
                     # inside, left of, etc. Locate the index of the relative
                     # value.)
 
-                    if bp == 'inside':
+                    if bp == 'inside' or bp == 'above':
                         aRelIndex = list(aSn.keys()).index(aPropValue)
                         bRelIndex = list(bSn.keys()).index(bPropValue)
 
@@ -148,12 +153,12 @@ class Agent:
             answersSn.append(self.GenerateSN(answerSet[key]))
 
         # Transformation Verification
-        validAnswers = OrderedDict()
+        validAnswers = []
         for i, answer in enumerate(answersSn):
-            pAnswer = 0
+            pAnswer = 0 #potential Answer
             for ckey, awkey in zip(cSn, answer):
                 cFigure = cSn[ckey]
-                awFigure = answer[awkey]
+                awFigure = answer[awkey]              
 
                 if not diffProps:
                     # No differences found. Find a frame that matches Frame C in all
@@ -167,10 +172,9 @@ class Agent:
                         # and (awp not in self.FlaggedProps):
                         if (cp == awp) and (cPropValue != awPropValue):
                             # if inside and relative position
-                            if cp == 'inside':
+                            if cp == 'inside' or cp == 'above':
                                 cRelIndex = list(cSn.keys()).index(cPropValue)
-                                awRelIndex = list(
-                                    answer.keys()).index(awPropValue)
+                                awRelIndex = list(answer.keys()).index(awPropValue)
 
                                 if cRelIndex == awRelIndex:
                                     continue
@@ -182,18 +186,20 @@ class Agent:
                         pAnswer += 1
 
                 else:
-                    for cp, awp in zip(cFigure.props, awFigure.props):
+                    mappedProp = self.cleanProps(cFigure.props, awFigure.props)
+                    for cp, awp in mappedProp:
+                        if not cp or not awp:
+                            continue
+
                         cPropValue = cFigure.props[cp]
                         awPropValue = awFigure.props[awp]
 
                         if cp in diffProps and awp in diffProps:
                             if (cp == awp) and (cPropValue != awPropValue):
-                                if awp == 'inside':
+                                if awp == 'inside' or awp == 'above':
                                     # check to see if position of awp matches stored pos.
-                                    cRelIndex = list(
-                                        cSn.keys()).index(cPropValue)
-                                    awRelIndex = list(
-                                        answer.keys()).index(awPropValue)
+                                    cRelIndex = list(cSn.keys()).index(cPropValue)
+                                    awRelIndex = list(answer.keys()).index(awPropValue)
 
                                     if awRelIndex == diffProps[awp]:
                                         pAnswer += 1
@@ -204,18 +210,18 @@ class Agent:
 
                                     if angleDiff == diffProps[awp]:
                                         pAnswer += 1
-                                elif awp == 'alignment':                                 
+                                elif awp == 'alignment':
                                     if diffProps[awp] == "mirrored":
                                         # check prop value from awp and see if its truly mirrored.
                                         if self.AlignmentMirrors[cPropValue] == awPropValue:
-                                            pAnswer += 1
+                                            pAnswer += 1                               
                                 else:
-                                    pAnswer += 1                                  
+                                    pAnswer += 1                   
 
-            if pAnswer == len(answer.items()):
-                validAnswers[i + 1] = answer
-
-        print(str(next(iter(validAnswers or []), None)))
+            validAnswers.append((i + 1, pAnswer, answer))
+            
+        validAnswers = sorted(validAnswers, key=lambda ans: ans[1], reverse=True) 
+        print(str(next(iter(validAnswers or []), None)[0]))
 
         return validAnswers
 
